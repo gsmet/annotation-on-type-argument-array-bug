@@ -1,0 +1,11 @@
+# Build output directories
+target/
+
+# Eclipse specific files/directories
+.classpath
+.project
+.settings
+.factorypath
+.checkstyle
+.externalToolBuilders
+maven-eclipse.xml
