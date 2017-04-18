@@ -15,18 +15,40 @@ public class WrongAnnotationsReturnedForArrayTypeArgumentTest {
 	@SuppressWarnings("unused")
 	private List<@MyAnnotation1 String @MyAnnotation2 []> stringArrayList;
 
+	@MyAnnotation3
+	private @MyAnnotation1 String @MyAnnotation2 [] stringArray;
+
 	public static void main(String[] args) throws NoSuchFieldException, SecurityException {
-		// returns MyAnnotation1 which is correct
+		// prints MyAnnotation1
 		System.out.println( "stringList - annotations found on type argument: "
 				+ Arrays.toString( getFirstTypeArgumentOfListAnnotatedType( "stringList" ).getAnnotations() ) );
 
-		// returns **MyAnnotation2** which is **incorrect** - it should be MyAnnotation1
+		// prints MyAnnotation2 as according to the JLS, it's the annotation targeting the whole array
+		// see https://docs.oracle.com/javase/specs/jls/se8/html/jls-9.html#jls-9.7.4
 		System.out.println( "stringArrayList - annotations found on type argument: "
 				+ Arrays.toString( getFirstTypeArgumentOfListAnnotatedType( "stringArrayList" ).getAnnotations() ) );
 
-		// returns **MyAnnotation1** which is **incorrect** - it should be MyAnnotation2
+		// prints MyAnnotation1 as according to the JLS, it's the annotation targeting the inner type
 		System.out.println( "stringArrayList - annotations found on nested array type argument: "
 				+ Arrays.toString( getComponentTypeOfStringArrayNestedInList().getAnnotations() ) );
+
+		// This is where the fun begins...
+
+		Field field = WrongAnnotationsReturnedForArrayTypeArgumentTest.class.getDeclaredField( "stringArray" );
+
+		// prints MyAnnotation3, MyAnnotation1 (so both annotations are considered to be on the field)
+		System.out.println( Arrays.toString( field.getAnnotations() ) );
+
+		// prints MyAnnotation2 as expected
+		AnnotatedArrayType fieldType = (AnnotatedArrayType) field.getAnnotatedType();
+		System.out.println( Arrays.toString( fieldType.getAnnotations() ) );
+
+		// prints MyAnnotation3, MyAnnotation1: MyAnnotation3 also applies to the inner type
+		System.out.println( Arrays.toString( fieldType.getAnnotatedGenericComponentType().getAnnotations() ) );
+
+		// With this in mind, I don't see how we would be able to support the following use case (where @Size would target the size of the array):
+		// @Size(min = 2)
+		// private @Email String[] emails;
 	}
 
 	private static AnnotatedType getFirstTypeArgumentOfListAnnotatedType(String fieldName) throws NoSuchFieldException, SecurityException {
